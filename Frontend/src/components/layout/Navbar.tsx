@@ -4,7 +4,6 @@ import { HomeIcon, VideoIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 const Navbar: React.FC = () => {
   const {
-    user,
     logout
   } = useAuth();
   const navigate = useNavigate();

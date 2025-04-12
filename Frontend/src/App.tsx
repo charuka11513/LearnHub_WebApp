@@ -43,26 +43,45 @@ const AuthCallback: React.FC = () => {
   const { setUser, setError } = useContext(AuthContext);
 
   React.useEffect(() => {
-    // Check if OAuth flow completed by fetching user data
-    fetch('http://localhost:8080/api/users/oauth-callback', {
+    console.log('Fetching /api/users/current');
+    fetch('http://localhost:8080/api/users/current', {
       method: 'GET',
-      credentials: 'include', // Include cookies/session
+      credentials: 'include',
     })
       .then((response) => {
-        if (!response.ok) {
-          throw new Error('OAuth authentication failed');
-        }
-        return response.json();
+        console.log('Response status:', response.status);
+        console.log('Response headers:', [...response.headers.entries()]);
+        return response.text().then((text) => {
+          console.log('Response text:', text || 'Empty response');
+          if (!text) {
+            return null; // Handle empty response
+          }
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('JSON parse error:', e);
+            throw new Error('Invalid JSON response');
+          }
+        });
       })
       .then((data) => {
-        setUser(data); // Store user in AuthContext
-        navigate('/');
+        console.log('Parsed data:', data);
+        if (data && data.id && data.email) {
+          setUser(data);
+          setError(null);
+          console.log('User set, navigating to /');
+          navigate('/');
+        } else {
+          console.log('No valid user data');
+          throw new Error('No user data returned');
+        }
       })
       .catch((error) => {
-        console.error('OAuth callback error:', error);
-        navigate('/login?error=oauth_failed');
+        console.error('Authentication error:', error);
+        setError(error.message || 'Authentication failed');
+        navigate('/login?error=auth_failed');
       });
-  }, [navigate, setUser]);
+  }, [navigate, setUser, setError]);
 
   return <div>Loading...</div>;
 };

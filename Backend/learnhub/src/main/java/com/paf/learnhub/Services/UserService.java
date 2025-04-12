@@ -35,18 +35,19 @@ public class UserService {
         user.setPassword(password);
         user.setAuthProvider("email");
         User savedUser = userRepository.save(user);
-        logger.info("User registered successfully: {}", email);
+        logger.info("User registered: email={}, id={}", email, savedUser.getId());
         return savedUser;
     }
 
     public User login(String email, String password) {
         logger.info("Logging in user with email: {}", email);
         Optional<User> user = userRepository.findByEmail(email);
-        if (user.isPresent() && user.get().getAuthProvider().equals("email") && user.get().getPassword().equals(password)) {
-            logger.info("Login successful for: {}", email);
+        if (user.isPresent() && user.get().getAuthProvider().equals("email") && 
+            user.get().getPassword().equals(password)) {
+            logger.info("Login successful: email={}", email);
             return user.get();
         }
-        logger.warn("Invalid credentials for: {}", email);
+        logger.warn("Invalid credentials: email={}", email);
         throw new RuntimeException("Invalid credentials");
     }
 
@@ -56,9 +57,10 @@ public class UserService {
             throw new RuntimeException("OAuth token is null");
         }
 
-        logger.info("Handling OAuth login for provider: {}", token.getAuthorizedClientRegistrationId());
-        Map<String, Object> attributes = token.getPrincipal().getAttributes();
         String provider = token.getAuthorizedClientRegistrationId();
+        logger.info("Handling OAuth login: provider={}", provider);
+        Map<String, Object> attributes = token.getPrincipal().getAttributes();
+        logger.debug("OAuth attributes: {}", attributes);
         String email = null;
         String name = null;
         String avatarUrl = null;
@@ -74,7 +76,7 @@ public class UserService {
                 avatarUrl = (String) attributes.get("avatar_url");
                 if (email == null) {
                     email = name + "@github.com"; // Fallback
-                    logger.info("GitHub email not provided, using fallback: {}", email);
+                    logger.warn("GitHub email missing, using fallback: email={}", email);
                 }
             } else {
                 logger.error("Unsupported provider: {}", provider);
@@ -82,53 +84,65 @@ public class UserService {
             }
 
             if (email == null || name == null) {
-                logger.error("Missing required attributes - email: {}, name: {}", email, name);
+                logger.error("Missing attributes: email={}, name={}, attributes={}", 
+                             email, name, attributes);
                 throw new RuntimeException("Missing required OAuth attributes");
             }
 
-            logger.info("OAuth user attributes - email: {}, name: {}, avatar: {}", email, name, avatarUrl);
+            logger.info("Filtered attributes: email={}, name={}, avatar={}", email, name, avatarUrl);
             Optional<User> existingUser = userRepository.findByEmail(email);
+            User user;
             if (existingUser.isPresent()) {
-                logger.info("Existing OAuth user found: {}", email);
-                return existingUser.get();
+                user = existingUser.get();
+                logger.info("Found user: email={}, id={}", email, user.getId());
+                if (!provider.equals(user.getAuthProvider())) {
+                    logger.info("Updating authProvider: email={}, from={} to={}", 
+                                email, user.getAuthProvider(), provider);
+                    user.setAuthProvider(provider);
+                    user.setAvatarUrl(avatarUrl);
+                    user = userRepository.save(user);
+                    logger.info("Updated user: email={}", email);
+                }
+            } else {
+                logger.info("Creating user: email={}", email);
+                user = new User();
+                user.setId(UUID.randomUUID().toString());
+                user.setEmail(email);
+                user.setName(name);
+                user.setAvatarUrl(avatarUrl);
+                user.setAuthProvider(provider);
+                user = userRepository.save(user);
+                logger.info("Saved user: email={}, id={}", email, user.getId());
             }
-
-            User user = new User();
-            user.setId(UUID.randomUUID().toString());
-            user.setEmail(email);
-            user.setName(name);
-            user.setAvatarUrl(avatarUrl);
-            user.setAuthProvider(provider);
-            User savedUser = userRepository.save(user);
-            logger.info("New OAuth user created: {}", email);
-            return savedUser;
+            return user;
         } catch (Exception e) {
-            logger.error("Error handling OAuth login: {}", e.getMessage(), e);
+            logger.error("OAuth login error: provider={}, error={}", provider, e.getMessage(), e);
             throw new RuntimeException("Failed to process OAuth login: " + e.getMessage());
         }
     }
 
     public User updateUser(String id, String name, String email) {
-        logger.info("Updating user with ID: {}", id);
+        logger.info("Updating user: id={}", id);
         Optional<User> userOpt = userRepository.findById(id);
         if (!userOpt.isPresent()) {
-            logger.warn("User not found: {}", id);
+            logger.warn("User not found: id={}", id);
             throw new RuntimeException("User not found");
         }
         User user = userOpt.get();
         user.setName(name);
         user.setEmail(email);
         User updatedUser = userRepository.save(user);
-        logger.info("User updated successfully: {}", id);
+        logger.info("User updated: id={}", id);
         return updatedUser;
     }
 
     public Optional<User> findById(String id) {
-        logger.info("Finding user with ID: {}", id);
+        logger.info("Finding user: id={}", id);
         return userRepository.findById(id);
     }
 
     public List<User> findAllUsers() {
+        logger.info("Fetching all users");
         return userRepository.findAll();
     }
 }
