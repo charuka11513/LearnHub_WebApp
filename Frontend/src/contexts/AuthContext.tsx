@@ -11,23 +11,30 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  error: string | null;
   setUser: (user: User | null) => void;
+  setError: (error: string | null) => void;
   updateUser: (userData: Partial<User>) => Promise<void>;
+  logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  error: null,
   setUser: () => {},
+  setError: () => {},
   updateUser: async () => {},
+  logout: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialize user state (e.g., check localStorage or session)
+    // Simulate checking for existing user session
     setLoading(false);
   }, []);
 
@@ -42,14 +49,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!response.ok) throw new Error('Failed to update user');
       const updatedUser = await response.json();
       setUser(updatedUser);
-    } catch (error) {
+      setError(null);
+    } catch (error: any) {
       console.error('Error updating user:', error);
+      setError(error.message || 'Failed to update user');
       throw error;
     }
   };
 
+  const logout = () => {
+    setUser(null);
+    setError(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, error, setUser, setError, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
