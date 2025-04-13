@@ -22,8 +22,9 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/comments/**").permitAll()
-                .requestMatchers("/api/users/**", "/login/oauth2/**", "/oauth2/authorization/**","/api/posts/**").permitAll()
+                .requestMatchers("/api/videos/**").permitAll()
+                .requestMatchers("/api/users/**", "/login/oauth2/**",
+                "/oauth2/authorization/**","/api/posts/**","/api/comments/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2

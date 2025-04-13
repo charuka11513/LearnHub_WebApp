@@ -139,6 +139,21 @@ public class PostController {
         }
     }
 
+
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getPostById(@PathVariable String id) {
+        try {
+            System.out.println("GET /api/posts/" + id);
+            Post post = postService.getPostById(id);
+            return new ResponseEntity<>(post, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Error fetching post: " + e.getMessage());
+            return new ResponseEntity<>(
+                new ErrorResponse("Post Not Found", e.getMessage()),
+                HttpStatus.NOT_FOUND
+            );
+        }
+    }
     private static class ErrorResponse {
         private String error;
         private String message;

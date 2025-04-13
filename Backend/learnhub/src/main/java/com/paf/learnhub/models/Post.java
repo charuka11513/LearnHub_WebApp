@@ -3,6 +3,7 @@ package com.paf.learnhub.models;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "posts")
@@ -17,6 +18,11 @@ public class Post {
     private int likes;
     private String imageId; // GridFS file ID
     private List<Object> comments;
+
+
+    public Post() {
+        this.comments = new ArrayList<>();
+    }
 
     // Getters and Setters
     public String getId() {

@@ -29,6 +29,11 @@ public class PostService {
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
+    
+    public Post getPostById(String id) {
+        return postRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+    }
 
     public Post updatePost(String id, String content, String userId) {
         Post post = postRepository.findById(id)
