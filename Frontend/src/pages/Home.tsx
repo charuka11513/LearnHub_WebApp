@@ -64,7 +64,33 @@ const Home: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchPosts();
+    const fetchRealPosts = async () => {
+      try {
+        setLoading(true);
+        const postResponse = await fetch('http://localhost:8080/api/posts', {
+          credentials: 'include',
+        });
+        if (!postResponse.ok) throw new Error('Failed to fetch posts');
+        const postsData: Post[] = await postResponse.json();
+        console.log('Posts:', postsData); // Debug
+        const postsWithComments = await Promise.all(
+          postsData.map(async (post) => {
+            const commentResponse = await fetch(`http://localhost:8080/api/comments/post/${post.id}`, {
+              credentials: 'include',
+            });
+            const comments = await commentResponse.json();
+            console.log(`Comments for post ${post.id}:`, comments); // Debug
+            return { ...post, comments: comments || [] };
+          })
+        );
+        setPosts(postsWithComments);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching real posts:', error);
+        setLoading(false);
+      }
+    };
+    fetchRealPosts();
   }, []);
   const handleAddPost = (newPost: Post) => {
     setPosts([newPost, ...posts]);

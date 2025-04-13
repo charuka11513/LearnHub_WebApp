@@ -14,7 +14,7 @@ const PostForm: React.FC<PostFormProps> = ({ onAddPost }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user, token } = useAuth();
+  const { user } = useAuth();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -59,7 +59,6 @@ const PostForm: React.FC<PostFormProps> = ({ onAddPost }) => {
       for (const [key, value] of formData.entries()) {
         console.log(`FormData: ${key}=${typeof value === 'string' ? value : '[File]'}`);
       }
-      console.log('Token:', token || 'No token (using session?)');
 
       const headers: HeadersInit = {};
       const response = await fetch('http://localhost:8080/api/posts', {

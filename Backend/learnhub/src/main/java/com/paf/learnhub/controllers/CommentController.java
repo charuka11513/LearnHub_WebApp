@@ -11,33 +11,33 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/comments")
 public class CommentController {
+
     @Autowired
     private CommentService commentService;
 
     @PostMapping
-    public ResponseEntity<Comment> createComment(@RequestBody Comment comment) {
-        return ResponseEntity.ok(commentService.createComment(comment));
+    public Comment addComment(@RequestBody Comment comment) {
+        return commentService.addComment(
+            comment.getPostId(),
+            comment.getUserId(),
+            comment.getUserName(),
+            comment.getContent()
+        );
     }
 
     @GetMapping("/post/{postId}")
-    public ResponseEntity<List<Comment>> getCommentsByPostId(@PathVariable String postId) {
-        return ResponseEntity.ok(commentService.getCommentsByPostId(postId));
+    public List<Comment> getCommentsByPostId(@PathVariable String postId) {
+        return commentService.getCommentsByPostId(postId);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Comment> updateComment(@PathVariable String id, @RequestBody Comment comment) {
-        Comment existingComment = commentService.getCommentsByPostId(comment.getPostId())
-                .stream().filter(c -> c.getId().equals(id)).findFirst().orElse(null);
-        if (existingComment != null) {
-            existingComment.setContent(comment.getContent());
-            return ResponseEntity.ok(commentService.updateComment(existingComment));
-        }
-        return ResponseEntity.notFound().build();
+    public Comment updateComment(@PathVariable String id, @RequestBody Comment comment) {
+        return commentService.updateComment(id, comment.getContent(), comment.getUserId());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteComment(@PathVariable String id) {
-        commentService.deleteComment(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Void> deleteComment(@PathVariable String id, @RequestBody Comment comment) {
+        commentService.deleteComment(id, comment.getUserId());
+        return ResponseEntity.ok().build();
     }
 }
