@@ -10,13 +10,14 @@ export interface Post {
   id: string;
   userId: string;
   userName: string;
-  userAvatar: string;
+  userAvatar?: string; // Optional, not in backend but used in PostCard
   content: string;
   createdAt: string;
   likes: number;
-  comments: Comment[];
-  images: PostImage[];
+  imageId?: string; // GridFS file ID
+  comments: any[];
 }
+
 export interface PostImage {
   id: string;
   url: string;

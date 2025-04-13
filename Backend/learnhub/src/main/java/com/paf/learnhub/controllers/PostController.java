@@ -1,108 +1,159 @@
 package com.paf.learnhub.controllers;
 
+import com.mongodb.client.gridfs.model.GridFSFile;
 import com.paf.learnhub.models.Post;
 import com.paf.learnhub.Services.PostService;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.gridfs.GridFsOperations;
+import org.springframework.data.mongodb.gridfs.GridFsTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/posts")
 public class PostController {
+
     @Autowired
     private PostService postService;
 
-    private static final String UPLOAD_DIR = "uploads/";
+    @Autowired
+    private GridFsTemplate gridFsTemplate;
 
-    @PostMapping("/create")
-    public ResponseEntity<Post> createPost(
-            @RequestParam("description") String description,
+    @Autowired
+    private GridFsOperations gridFsOperations;
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> createPost(
             @RequestParam("userId") String userId,
-            @RequestParam(value = "photo", required = false) MultipartFile photo,
-            @RequestParam(value = "video", required = false) MultipartFile video) {
+            @RequestParam("userName") String userName,
+            @RequestParam("content") String content,
+            @RequestParam(value = "image", required = false) MultipartFile image) {
         try {
-            // Create the uploads directory if it doesn't exist
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
-
-            // Handle photo upload
-            String photoUrl = null;
-            if (photo != null && !photo.isEmpty()) {
-                if (!photo.getContentType().startsWith("image/")) {
-                    return ResponseEntity.badRequest().body(null);
-                }
-                String photoFileName = UUID.randomUUID() + "_" + photo.getOriginalFilename();
-                Path photoPath = Paths.get(UPLOAD_DIR + photoFileName);
-                Files.write(photoPath, photo.getBytes());
-                photoUrl = "/uploads/" + photoFileName;
+            System.out.println("POST /api/posts received: userId=" + userId + ", userName=" + userName + ", content=" + content + ", image=" + (image != null ? image.getOriginalFilename() : "null"));
+            String imageId = null;
+            if (image != null && !image.isEmpty()) {
+                InputStream inputStream = image.getInputStream();
+                ObjectId fileId = gridFsTemplate.store(
+                    inputStream,
+                    image.getOriginalFilename(),
+                    image.getContentType()
+                );
+                imageId = fileId.toString();
+                System.out.println("Image stored in GridFS: id=" + imageId);
             }
-
-            // Handle video upload
-            String videoUrl = null;
-            if (video != null && !video.isEmpty()) {
-                if (!video.getContentType().startsWith("video/")) {
-                    return ResponseEntity.badRequest().body(null);
-                }
-                String videoFileName = UUID.randomUUID() + "_" + video.getOriginalFilename();
-                Path videoPath = Paths.get(UPLOAD_DIR + videoFileName);
-                Files.write(videoPath, video.getBytes());
-                videoUrl = "/uploads/" + videoFileName;
-            }
-
-            // Create the post
-            Post post = new Post();
-            post.setUserId(userId);
-            post.setDescription(description);
-            Post savedPost = postService.createPost(post, photoUrl, videoUrl);
-
-            return ResponseEntity.ok(savedPost);
+            Post post = postService.createPost(userId, userName, content, imageId);
+            System.out.println("Post created: id=" + post.getId());
+            return new ResponseEntity<>(post, HttpStatus.OK);
         } catch (IOException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).build();
+            System.err.println("File upload error: " + e.getMessage());
+            return new ResponseEntity<>(
+                new ErrorResponse("File Upload Error", e.getMessage()),
+                HttpStatus.BAD_REQUEST
+            );
+        } catch (Exception e) {
+            System.err.println("Server error: " + e.getMessage());
+            return new ResponseEntity<>(
+                new ErrorResponse("Server Error", e.getMessage()),
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Post>> getAllPosts() {
-        return ResponseEntity.ok(postService.getAllPosts());
+        System.out.println("GET /api/posts called");
+        return new ResponseEntity<>(postService.getAllPosts(), HttpStatus.OK);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Post> getPostById(@PathVariable String id) {
-        Post post = postService.getPostById(id);
-        return post != null ? ResponseEntity.ok(post) : ResponseEntity.notFound().build();
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Post> updatePost(@PathVariable String id, @RequestBody Post post) {
-        Post existingPost = postService.getPostById(id);
-        if (existingPost != null) {
-            existingPost.setDescription(post.getDescription());
-            return ResponseEntity.ok(postService.updatePost(existingPost));
+    @GetMapping(value = "/image/{imageId}", produces = {MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE})
+    public ResponseEntity<byte[]> getImage(@PathVariable String imageId) {
+        try {
+            GridFSFile file = gridFsTemplate.findOne(new org.springframework.data.mongodb.core.query.Query(
+                org.springframework.data.mongodb.core.query.Criteria.where("_id").is(new ObjectId(imageId))
+            ));
+            if (file == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            InputStream inputStream = gridFsOperations.getResource(file).getInputStream();
+            byte[] imageBytes = inputStream.readAllBytes();
+            inputStream.close();
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.getMetadata().getString("_contentType")))
+                .body(imageBytes);
+        } catch (IOException e) {
+            System.err.println("Image retrieval error: " + e.getMessage());
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updatePost(@PathVariable String id, @RequestBody Post post) {
+        try {
+            System.out.println("PUT /api/posts/" + id);
+            Post updatedPost = postService.updatePost(id, post.getContent(), post.getUserId());
+            return new ResponseEntity<>(updatedPost, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Update error: " + e.getMessage());
+            return new ResponseEntity<>(
+                new ErrorResponse("Update Error", e.getMessage()),
+                HttpStatus.BAD_REQUEST
+            );
+        }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePost(@PathVariable String id) {
-        postService.deletePost(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deletePost(@PathVariable String id, @RequestBody Post post) {
+        try {
+            System.out.println("DELETE /api/posts/" + id);
+            postService.deletePost(id, post.getUserId());
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.err.println("Delete error: " + e.getMessage());
+            return new ResponseEntity<>(
+                new ErrorResponse("Delete Error", e.getMessage()),
+                HttpStatus.BAD_REQUEST
+            );
+        }
     }
 
     @PostMapping("/{id}/like")
-    public ResponseEntity<Post> likePost(@PathVariable String id, @RequestBody String userId) {
-        Post post = postService.getPostById(id);
-        if (post != null) {
-            post.getLikes().add(userId);
-            return ResponseEntity.ok(postService.updatePost(post));
+    public ResponseEntity<?> likePost(@PathVariable String id) {
+        try {
+            System.out.println("POST /api/posts/" + id + "/like");
+            postService.likePost(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.err.println("Like error: " + e.getMessage());
+            return new ResponseEntity<>(
+                new ErrorResponse("Like Error", e.getMessage()),
+                HttpStatus.BAD_REQUEST
+            );
         }
-        return ResponseEntity.notFound().build();
+    }
+
+    private static class ErrorResponse {
+        private String error;
+        private String message;
+
+        public ErrorResponse(String error, String message) {
+            this.error = error;
+            this.message = message != null ? message : "No details available";
+        }
+
+        public String getError() {
+            return error;
+        }
+
+        public String getMessage() {
+            return message;
+        }
     }
 }
