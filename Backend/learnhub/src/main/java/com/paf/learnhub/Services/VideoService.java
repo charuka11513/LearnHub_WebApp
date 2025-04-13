@@ -56,6 +56,11 @@ public class VideoService {
         videoRepository.deleteById(id);
     }
 
+    public void deleteVideosByPostId(String postId) {
+        List<Video> videos = videoRepository.findByPostId(postId);
+        videoRepository.deleteAll(videos);
+    }
+
     public Video getVideoById(String id) {
         return videoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Video not found"));

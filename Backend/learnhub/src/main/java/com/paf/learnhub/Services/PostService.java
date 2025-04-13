@@ -1,8 +1,12 @@
 package com.paf.learnhub.Services;
 
+import org.bson.types.ObjectId;
 import com.paf.learnhub.models.Post;
 import com.paf.learnhub.repositories.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.gridfs.GridFsTemplate;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,6 +17,12 @@ public class PostService {
 
     @Autowired
     private PostRepository postRepository;
+
+    @Autowired
+    private VideoService videoService;
+
+    @Autowired
+    private GridFsTemplate gridFsTemplate;
 
     public Post createPost(String userId, String userName, String content, String imageId) {
         Post post = new Post();
@@ -51,6 +61,14 @@ public class PostService {
         if (!post.getUserId().equals(userId)) {
             throw new RuntimeException("Unauthorized");
         }
+        // Delete associated videos
+        videoService.deleteVideosByPostId(id);
+        // Delete GridFS image if exists
+        if (post.getImageId() != null) {
+            Query query = new Query(Criteria.where("_id").is(new ObjectId(post.getImageId())));
+            gridFsTemplate.delete(query);
+        }
+        // Delete post
         postRepository.deleteById(id);
     }
 
