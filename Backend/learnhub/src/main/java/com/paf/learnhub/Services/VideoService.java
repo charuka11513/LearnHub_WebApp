@@ -1,6 +1,7 @@
 package com.paf.learnhub.Services;
 
 import com.paf.learnhub.models.Video;
+import com.paf.learnhub.repositories.QuizRepository;
 import com.paf.learnhub.repositories.VideoRepository;
 import org.bson.types.Binary;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,9 @@ public class VideoService {
 
     @Autowired
     private VideoRepository videoRepository;
+
+    @Autowired
+    private QuizRepository quizRepository;
 
     public Video uploadVideo(String postId, String userId, String userName, String title, String description, Binary videoData, Binary thumbnailData) {
         Video video = new Video();
@@ -53,11 +57,15 @@ public class VideoService {
         if (!video.getUserId().equals(userId)) {
             throw new RuntimeException("Unauthorized");
         }
+        quizRepository.findByVideoId(id).ifPresent(quiz -> quizRepository.delete(quiz));
         videoRepository.deleteById(id);
     }
 
     public void deleteVideosByPostId(String postId) {
         List<Video> videos = videoRepository.findByPostId(postId);
+        for (Video video : videos) {
+            quizRepository.findByVideoId(video.getId()).ifPresent(quiz -> quizRepository.delete(quiz));
+        }
         videoRepository.deleteAll(videos);
     }
 

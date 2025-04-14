@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import VideoPage from './pages/VideoPage';
 import PostVideoPage from './pages/PostVideoPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import VideoQuizPage from './pages/QuizPage';
 
 export function App() {
   return (
@@ -30,6 +31,7 @@ export function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="videos" element={<VideoPage />} />
             <Route path="post/:postId/videos" element={<PostVideoPage />} />
+            <Route path="/video/:videoId/quizzes" element={<VideoQuizPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
