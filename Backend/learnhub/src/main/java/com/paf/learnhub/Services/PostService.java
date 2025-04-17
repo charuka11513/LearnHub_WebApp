@@ -24,6 +24,9 @@ public class PostService {
     @Autowired
     private GridFsTemplate gridFsTemplate;
 
+    @Autowired
+    private CommentService commentService; // Added to handle comment deletion
+
     public Post createPost(String userId, String userName, String content, String imageId) {
         Post post = new Post();
         post.setUserId(userId);
@@ -63,6 +66,8 @@ public class PostService {
         }
         // Delete associated videos
         videoService.deleteVideosByPostId(id);
+        // Delete associated comments
+        commentService.deleteCommentsByPostId(id);
         // Delete GridFS image if exists
         if (post.getImageId() != null) {
             Query query = new Query(Criteria.where("_id").is(new ObjectId(post.getImageId())));
