@@ -33,10 +33,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // *** Changed Code Section Start ***
   useEffect(() => {
-    // Simulate checking for existing user session
+    // Restore user from localStorage on mount
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
     setLoading(false);
   }, []);
+
+  const setUserAndPersist = (userData: User | null) => {
+    setUser(userData);
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData));
+    } else {
+      localStorage.removeItem('user');
+    }
+  };
 
   const updateUser = async (userData: Partial<User>) => {
     if (!user) throw new Error('No user logged in');
@@ -48,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       if (!response.ok) throw new Error('Failed to update user');
       const updatedUser = await response.json();
-      setUser(updatedUser);
+      setUserAndPersist(updatedUser);
       setError(null);
     } catch (error: any) {
       console.error('Error updating user:', error);
@@ -58,12 +72,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
-    setUser(null);
+    setUserAndPersist(null);
     setError(null);
   };
+  // *** Changed Code Section End ***
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, setUser, setError, updateUser, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, setUser: setUserAndPersist, setError, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

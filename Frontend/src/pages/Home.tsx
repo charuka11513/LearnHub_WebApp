@@ -3,67 +3,27 @@ import PostForm from '../components/post/PostForm';
 import PostList from '../components/post/PostList';
 import { Post } from '../types/Post';
 import { GraduationCapIcon, BookOpenIcon, UsersIcon } from 'lucide-react';
+
+const avatarUrls = [
+  'https://avatar.iran.liara.run/public/1',
+  'https://avatar.iran.liara.run/public/2',
+  'https://avatar.iran.liara.run/public/3',
+  'https://avatar.iran.liara.run/public/4',
+  'https://avatar.iran.liara.run/public/5',
+  'https://avatar.iran.liara.run/public/6',
+];
+
+const getAvatarUrl = (userId: string) => {
+  if (!userId) return avatarUrls[0];
+  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return avatarUrls[hash % avatarUrls.length];
+};
+
 const Home: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setTimeout(() => {
-          const mockPosts = [{
-            id: '1',
-            userId: '123',
-            userName: 'John Doe',
-            userAvatar: 'https://i.pravatar.cc/150?u=john',
-            content: 'Just created a new tutorial on HTML basics. Check out the video section! Learn the fundamentals of web development with this comprehensive guide.',
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            likes: 15,
-            comments: [{
-              id: '101',
-              userId: '456',
-              userName: 'Jane Smith',
-              content: 'Great tutorial! Very helpful for beginners.',
-              createdAt: new Date(Date.now() - 3600000).toISOString()
-            }]
-          }, {
-            id: '2',
-            userId: '456',
-            userName: 'Jane Smith',
-            userAvatar: 'https://i.pravatar.cc/150?u=jane',
-            content: 'Looking for recommendations on good React state management libraries. Any suggestions? Working on a large-scale application and need something scalable.',
-            createdAt: new Date(Date.now() - 172800000).toISOString(),
-            likes: 8,
-            comments: [{
-              id: '201',
-              userId: '789',
-              userName: 'Alex Johnson',
-              content: 'I recommend Redux Toolkit or Zustand depending on your needs.',
-              createdAt: new Date(Date.now() - 1800000).toISOString()
-            }]
-          }, {
-            id: '3',
-            userId: '789',
-            userName: 'Sarah Wilson',
-            userAvatar: 'https://i.pravatar.cc/150?u=sarah',
-            content: 'Just uploaded a comprehensive JavaScript crash course! Perfect for beginners who want to learn modern JavaScript. Check out the video section for the full tutorial.',
-            createdAt: new Date(Date.now() - 259200000).toISOString(),
-            likes: 23,
-            comments: [{
-              id: '301',
-              userId: '123',
-              userName: 'John Doe',
-              content: 'Amazing content! Your explanations are always so clear.',
-              createdAt: new Date(Date.now() - 900000).toISOString()
-            }]
-          }];
-          setPosts(mockPosts);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error fetching posts:', error);
-        setLoading(false);
-      }
-    };
     const fetchRealPosts = async () => {
       try {
         setLoading(true);
@@ -72,57 +32,65 @@ const Home: React.FC = () => {
         });
         if (!postResponse.ok) throw new Error('Failed to fetch posts');
         const postsData: Post[] = await postResponse.json();
-        console.log('Posts:', postsData); // Debug
-        const postsWithComments = await Promise.all(
+        const postsWithCommentsAndAvatars = await Promise.all(
           postsData.map(async (post) => {
             const commentResponse = await fetch(`http://localhost:8080/api/comments/post/${post.id}`, {
               credentials: 'include',
             });
             const comments = await commentResponse.json();
-            console.log(`Comments for post ${post.id}:`, comments); // Debug
-            return { ...post, comments: comments || [] };
+            return {
+              ...post,
+              avatarUrl: getAvatarUrl(post.userId),
+              comments: comments.map((comment: any) => ({
+                ...comment,
+                avatarUrl: getAvatarUrl(comment.userId),
+              })) || [],
+            };
           })
         );
-        setPosts(postsWithComments);
-        setLoading(false);
+        setPosts(postsWithCommentsAndAvatars);
       } catch (error) {
         console.error('Error fetching real posts:', error);
+      } finally {
         setLoading(false);
       }
     };
     fetchRealPosts();
   }, []);
+
   const handleAddPost = (newPost: Post) => {
-    setPosts([newPost, ...posts]);
+    setPosts([{ ...newPost, userAvatar: getAvatarUrl(newPost.userId), comments: [] }, ...posts]);
   };
+
   const handleUpdatePost = (updatedPost: Post) => {
-    setPosts(posts.map(post => post.id === updatedPost.id ? updatedPost : post));
+    setPosts(posts.map(post => post.id === updatedPost.id ? { ...updatedPost, avatarUrl: getAvatarUrl(updatedPost.userId) } : post));
   };
+
   const handleDeletePost = (postId: string) => {
     setPosts(posts.filter(post => post.id !== postId));
   };
+
   const handleLikePost = (postId: string) => {
     setPosts(posts.map(post => {
       if (post.id === postId) {
-        return {
-          ...post,
-          likes: post.likes + 1
-        };
+        return { ...post, likes: post.likes + 1 };
       }
       return post;
     }));
   };
+
   const handleAddComment = (postId: string, comment: any) => {
     setPosts(posts.map(post => {
       if (post.id === postId) {
         return {
           ...post,
-          comments: [...post.comments, comment]
+          comments: [...post.comments, { ...comment, avatarUrl: getAvatarUrl(comment.userId) }],
         };
       }
       return post;
     }));
   };
+
   const handleUpdateComment = (postId: string, commentId: string, content: string) => {
     setPosts(posts.map(post => {
       if (post.id === postId) {
@@ -130,25 +98,28 @@ const Home: React.FC = () => {
           ...post,
           comments: post.comments.map(comment => comment.id === commentId ? {
             ...comment,
-            content
-          } : comment)
+            content,
+          } : comment),
         };
       }
       return post;
     }));
   };
+
   const handleDeleteComment = (postId: string, commentId: string) => {
     setPosts(posts.map(post => {
       if (post.id === postId) {
         return {
           ...post,
-          comments: post.comments.filter(comment => comment.id !== commentId)
+          comments: post.comments.filter(comment => comment.id !== commentId),
         };
       }
       return post;
     }));
   };
-  return <div className="max-w-4xl mx-auto">
+
+  return (
+    <div className="max-w-4xl mx-auto">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 mb-8 text-white">
         <h1 className="text-3xl font-bold mb-2">Welcome to LearnShare</h1>
         <p className="text-blue-100 mb-4">
@@ -185,10 +156,24 @@ const Home: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">Learning Feed</h2>
         </div>
-        {loading ? <div className="flex justify-center py-10">
+        {loading ? (
+          <div className="flex justify-center py-10">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-          </div> : <PostList posts={posts} onUpdatePost={handleUpdatePost} onDeletePost={handleDeletePost} onLikePost={handleLikePost} onAddComment={handleAddComment} onUpdateComment={handleUpdateComment} onDeleteComment={handleDeleteComment} />}
+          </div>
+        ) : (
+          <PostList
+            posts={posts}
+            onUpdatePost={handleUpdatePost}
+            onDeletePost={handleDeletePost}
+            onLikePost={handleLikePost}
+            onAddComment={handleAddComment}
+            onUpdateComment={handleUpdateComment}
+            onDeleteComment={handleDeleteComment}
+          />
+        )}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Home;

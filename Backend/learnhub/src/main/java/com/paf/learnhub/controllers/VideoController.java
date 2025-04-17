@@ -85,7 +85,7 @@ public class VideoController {
                 .collect(Collectors.toList());
     }
 
-    @GetMapping
+    @GetMapping("/post/allvideos")
     public List<VideoResponse> getAllVideos() {
         return videoService.getAllVideos().stream()
                 .map(this::toResponse)

@@ -19,7 +19,7 @@ const PostList: React.FC<PostListProps> = ({
   onLikePost,
   onAddComment,
   onUpdateComment,
-  onDeleteComment
+  onDeleteComment,
 }) => {
   return (
     <div className="max-w-3xl mx-auto p-4">

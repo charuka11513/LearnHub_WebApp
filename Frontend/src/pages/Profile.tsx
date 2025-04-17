@@ -1,6 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
+const avatarUrls = [
+  'https://avatar.iran.liara.run/public/1',
+  'https://avatar.iran.liara.run/public/2',
+  'https://avatar.iran.liara.run/public/3',
+  'https://avatar.iran.liara.run/public/4',
+  'https://avatar.iran.liara.run/public/5',
+  'https://avatar.iran.liara.run/public/6',
+];
+
+const getAvatarUrl = (userId: string) => {
+  if (!userId) return avatarUrls[0];
+  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return avatarUrls[hash % avatarUrls.length];
+};
+
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -33,9 +48,12 @@ const Profile: React.FC = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-4 mb-6">
           <img
-            src={user?.avatarUrl || 'https://i.pravatar.cc/150?u=default'}
+            src={user?.avatarUrl || getAvatarUrl(user?.id || '')}
             alt={user?.name || 'User'}
-            className="w-24 h-24 rounded-full"
+            className="w-24 h-24 rounded-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = avatarUrls[0];
+            }}
           />
           <div>
             <h2 className="text-xl font-semibold">{user?.name}</h2>

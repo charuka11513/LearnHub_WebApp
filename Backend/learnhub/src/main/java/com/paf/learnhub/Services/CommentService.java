@@ -17,6 +17,9 @@ public class CommentService {
     private CommentRepository commentRepository;
 
     public Comment addComment(String postId, String userId, String userName, String content) {
+        if (content == null || content.trim().isEmpty()) {
+            throw new RuntimeException("Comment content cannot be empty");
+        }
         Comment comment = new Comment();
         comment.setId(UUID.randomUUID().toString());
         comment.setPostId(postId);
@@ -31,13 +34,18 @@ public class CommentService {
         return commentRepository.findByPostId(postId);
     }
 
+    // *** Changed Code Section Start ***
     public Comment updateComment(String commentId, String content, String userId) {
         Optional<Comment> commentOpt = commentRepository.findById(commentId);
         if (!commentOpt.isPresent() || !commentOpt.get().getUserId().equals(userId)) {
             throw new RuntimeException("Comment not found or unauthorized");
         }
         Comment comment = commentOpt.get();
+        if (content == null || content.trim().isEmpty()) {
+            throw new RuntimeException("Comment content cannot be empty");
+        }
         comment.setContent(content);
+        comment.setCreatedAt(LocalDateTime.now().toString()); // Update timestamp
         return commentRepository.save(comment);
     }
 
@@ -48,4 +56,10 @@ public class CommentService {
         }
         commentRepository.deleteById(commentId);
     }
+
+    public void deleteCommentsByPostId(String postId) {
+        List<Comment> comments = commentRepository.findByPostId(postId);
+        commentRepository.deleteAll(comments);
+    }
+    // *** Changed Code Section End ***
 }

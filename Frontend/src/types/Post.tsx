@@ -5,6 +5,7 @@ export interface Comment {
   userName: string;
   content: string;
   createdAt: string;
+  avatarUrl?: string;
 }
 export interface Post {
   id: string;
@@ -16,6 +17,7 @@ export interface Post {
   likes: number;
   imageId?: string; // GridFS file ID
   comments: any[];
+  avatarUrl?: string;
 }
 
 export interface PostImage {
