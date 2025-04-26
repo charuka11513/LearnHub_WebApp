@@ -21,6 +21,9 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PostService postService;
+
     public User register(String name, String email, String password) {
         logger.info("Registering user with email: {}", email);
         Optional<User> existingUser = userRepository.findByEmail(email);
@@ -145,4 +148,20 @@ public class UserService {
         logger.info("Fetching all users");
         return userRepository.findAll();
     }
+
+    public void deleteUser(String userId) {
+        logger.info("Deleting user: id={}", userId);
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (!userOpt.isPresent()) {
+            logger.warn("User not found: id={}", userId);
+            throw new RuntimeException("User not found");
+        }
+        // Delete all posts by the user
+        postService.deletePostsByUserId(userId);
+        // Delete the user
+        userRepository.deleteById(userId);
+        logger.info("User deleted: id={}", userId);
+    }
+
+
 }

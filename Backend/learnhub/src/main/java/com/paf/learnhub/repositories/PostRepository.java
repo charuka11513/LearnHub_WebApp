@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface PostRepository extends MongoRepository<Post, String> {
     List<Post> findAllByOrderByCreatedAtDesc();
+    List<Post> findByUserId(String userId);
 }

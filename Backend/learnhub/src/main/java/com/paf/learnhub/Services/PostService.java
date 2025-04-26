@@ -76,6 +76,26 @@ public class PostService {
         // Delete post
         postRepository.deleteById(id);
     }
+/////////delete user after delete user releted all
+public void deletePostsByUserId(String userId) {
+    // Find all posts by the user
+    List<Post> posts = postRepository.findByUserId(userId);
+    
+    // Delete each post and its associated resources
+    for (Post post : posts) {
+        // Delete associated videos
+        videoService.deleteVideosByPostId(post.getId());
+        // Delete associated comments
+        commentService.deleteCommentsByPostId(post.getId());
+        // Delete GridFS image if exists
+        if (post.getImageId() != null) {
+            Query query = new Query(Criteria.where("_id").is(new ObjectId(post.getImageId())));
+            gridFsTemplate.delete(query);
+        }
+        // Delete the post
+        postRepository.deleteById(post.getId());
+    }
+}
 
     public void likePost(String id) {
         Post post = postRepository.findById(id)
