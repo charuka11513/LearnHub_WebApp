@@ -80,6 +80,9 @@ public class PostService {
 public void deletePostsByUserId(String userId) {
     // Find all posts by the user
     List<Post> posts = postRepository.findByUserId(userId);
+
+    // Delete all comments by the user
+    commentService.deleteCommentsByUserId(userId);
     
     // Delete each post and its associated resources
     for (Post post : posts) {
