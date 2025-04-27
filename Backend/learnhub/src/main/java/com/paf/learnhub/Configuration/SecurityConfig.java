@@ -22,11 +22,13 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(authorize -> authorize
+
                 .requestMatchers("/api/quizzes/**").permitAll()
                 .requestMatchers("/api/users/**", "/login/oauth2/**",
                 "/oauth2/authorization/**","/api/posts/**","/api/comments/**","/api/videos/**").permitAll()
                 .anyRequest().authenticated()
             )
+            
             .oauth2Login(oauth2 -> oauth2
                 .successHandler(customOAuth2SuccessHandler)
                 .failureUrl("http://localhost:5173/login?error=oauth_failed")

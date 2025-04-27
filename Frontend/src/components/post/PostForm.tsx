@@ -3,6 +3,22 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ImageIcon, X as XIcon } from 'lucide-react';
 import { Post } from '../../types/Post';
 
+// Define avatar URLs and getAvatarUrl function
+const avatarUrls = [
+  'https://avatar.iran.liara.run/public/1',
+  'https://avatar.iran.liara.run/public/2',
+  'https://avatar.iran.liara.run/public/3',
+  'https://avatar.iran.liara.run/public/4',
+  'https://avatar.iran.liara.run/public/5',
+  'https://avatar.iran.liara.run/public/6',
+];
+
+const getAvatarUrl = (userId: string) => {
+  if (!userId) return avatarUrls[0];
+  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return avatarUrls[hash % avatarUrls.length];
+};
+
 interface PostFormProps {
   onAddPost: (post: Post) => void;
 }
@@ -102,7 +118,7 @@ const PostForm: React.FC<PostFormProps> = ({ onAddPost }) => {
       <form onSubmit={handleSubmit}>
         <div className="flex items-start space-x-4">
           <img
-            src={user?.avatarUrl || 'https://i.pravatar.cc/150?u=default'}
+            src={getAvatarUrl(user?.id || '')}
             alt={user?.name || 'User'}
             className="w-10 h-10 rounded-full"
           />

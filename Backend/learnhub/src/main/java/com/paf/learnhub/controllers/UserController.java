@@ -111,6 +111,20 @@ public class UserController {
                     return ResponseEntity.notFound().build();
                 });
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable String id, HttpSession session) {
+        logger.info("Delete user request: id={}", id);
+        try {
+            userService.deleteUser(id);
+            session.invalidate();
+            logger.info("User deleted and session invalidated: id={}", id);
+            return ResponseEntity.ok().body("User and related posts deleted successfully");
+        } catch (Exception e) {
+            logger.error("User deletion failed: id={}, error={}", id, e.getMessage());
+            return ResponseEntity.badRequest().body("Failed to delete user: " + e.getMessage());
+        }
+    }
+    
 
     @GetMapping("/oauth-failure")
     public ResponseEntity<String> oauthFailure() {

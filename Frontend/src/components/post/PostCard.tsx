@@ -120,7 +120,7 @@ const PostCard: React.FC<PostCardProps> = ({
         <img
           src={post.avatarUrl || getAvatarUrl(post.userId)}
           alt={post.userName || 'User'}
-          className="w-8 h-8 rounded-full object-cover" // Changed to w-8 h-8 for consistency
+          className="w-8 h-8 rounded-full object-cover" 
           onError={(e) => {
             e.currentTarget.src = avatarUrls[0];
           }}
@@ -135,8 +135,7 @@ const PostCard: React.FC<PostCardProps> = ({
               <div className="flex space-x-2">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="text-gray-500 hover:text-blue-600"
-                >
+                  className="text-gray-500 hover:text-blue-600">
                   <EditIcon size={18} />
                 </button>
                 <button
